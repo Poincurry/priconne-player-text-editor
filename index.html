@@ -1,0 +1,103 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8" name="viewport" content="width=device-width,user-scalable=no">
+<title>프리코네 전작 플레이어 텍스트 수정</title>
+<style>
+	.exampletext {
+		font-size: small;
+	}
+	.namelist {
+		width: 70px;
+	}
+	
+	.scriptlist {
+		width: 700px;
+	}
+</style>
+</head>
+
+<body>
+<input type="file" id="inputbutton"><input type="button" value="확인" onclick="loaddata(inputbutton.files)">
+<p id="textlist"></p>
+<input type="button" value="변경" onclick="savefile()">
+
+<script>
+	var rawtext = "";
+	var splittext = "";
+	var textlist = document.getElementById('textlist');
+	var assembledtext = "";
+	var textfilename = "";
+	
+	function loaddata(filedata) {
+		var reader = new FileReader();
+		reader.onload = function () {
+			rawtext = reader.result;
+			textfilename = filedata[0].name;
+			showtext(rawtext);
+		};
+		reader.readAsText(filedata[0], /* optional */ "UTF-8");
+	}
+	
+	function showtext(textfile) {
+		textlist.innerHTML = '';  // paragraph 리셋
+
+		splittext = textfile.split('"cmd":"name"')
+		for (let i=1; i<splittext.length; i++) {
+			const namestart = splittext[i].search('"text":"') + 8;
+			const namelength = splittext[i].substr(namestart).search('"');
+			const nametext = splittext[i].substr(namestart, namelength);
+			
+			const beforename = splittext[i].substr(0, namestart);
+			const aftername = splittext[i].substr(namestart + namelength);
+			
+			const scriptstart = aftername.search('"text":"') + 8;
+			const scriptlength = aftername.substr(scriptstart).search('"');
+			const scripttext = aftername.substr(scriptstart, scriptlength);
+			
+			const beforescript = aftername.substr(0, scriptstart);
+			const afterscript = aftername.substr(scriptstart + scriptlength);
+			
+			splittext[i] = [beforename, nametext, beforescript, scripttext, afterscript];
+			textlist.innerHTML += '<span class="exampletext">' + nametext + ': ' + scripttext + '</span><br>';
+			textlist.innerHTML += '<input type="text" class="namelist" id="namelist' + i + '" value="' + nametext + '"> <input type="text" class="scriptlist" id="scriptlist' + i + '" value="' + scripttext +'"><br>'
+		}
+	}	
+	// 파일 데이터 불러오고 분리하는 부분
+	
+	function savefile() {
+		assembletext();
+		download(assembledtext, textfilename, 'text/plane');
+	}
+	
+	function download(data, filename, type) {
+		var file = new Blob([data], {type: type});
+		if (window.navigator.msSaveOrOpenBlob) // IE10+
+			window.navigator.msSaveOrOpenBlob(file, filename);
+		else { // Others
+			var a = document.createElement("a"),
+					url = URL.createObjectURL(file);
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(function() {
+				document.body.removeChild(a);
+				window.URL.revokeObjectURL(url);  
+			}, 0); 
+		}
+	}
+	
+	function assembletext() {
+		assembledtext = splittext[0];
+		for (let i=1; i<splittext.length; i++) {
+			const namelistid = 'namelist' + i;			
+			const scriptlistid = 'scriptlist' + i;
+			
+			assembledtext = assembledtext + '"cmd":"name"' + splittext[i][0] + document.getElementById(namelistid).value + splittext[i][2] + document.getElementById(scriptlistid).value + splittext[i][4];
+		}
+	}
+</script>
+
+</body>
+</html>
