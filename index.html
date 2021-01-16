@@ -10,9 +10,11 @@
 	.namelist {
 		width: 70px;
 	}
-	
-	.scriptlist {
+	.labellist {
 		width: 700px;
+	}
+	.labellistwoname {
+		width: 782px;
 	}
 </style>
 </head>
@@ -36,34 +38,48 @@
 			textfilename = filedata[0].name;
 			showtext(rawtext);
 		};
-		reader.readAsText(filedata[0], /* optional */ "UTF-8");
+		reader.readAsText(filedata[0], "UTF-8");
 	}
 	
 	function showtext(textfile) {
 		textlist.innerHTML = '';  // paragraph 리셋
 
-		splittext = textfile.split('"cmd":"name"')
+		splittext = textfile.split('"cmd":"')
 		for (let i=1; i<splittext.length; i++) {
-			const namestart = splittext[i].search('"text":"') + 8;
-			const namelength = splittext[i].substr(namestart).search('"');
-			const nametext = splittext[i].substr(namestart, namelength);
-			
-			const beforename = splittext[i].substr(0, namestart);
-			const aftername = splittext[i].substr(namestart + namelength);
-			
-			const scriptstart = aftername.search('"text":"') + 8;
-			const scriptlength = aftername.substr(scriptstart).search('"');
-			const scripttext = aftername.substr(scriptstart, scriptlength);
-			
-			const beforescript = aftername.substr(0, scriptstart);
-			const afterscript = aftername.substr(scriptstart + scriptlength);
-			
-			splittext[i] = [beforename, nametext, beforescript, scripttext, afterscript];
-			textlist.innerHTML += '<span class="exampletext">' + nametext + ': ' + scripttext + '</span><br>';
-			textlist.innerHTML += '<input type="text" class="namelist" id="namelist' + i + '" value="' + nametext + '"> <input type="text" class="scriptlist" id="scriptlist' + i + '" value="' + scripttext +'"><br>'
+			if (splittext[i].search('"text":"')) {
+				if (splittext[i].substr(0,4) === 'name') {
+					const namestart = splittext[i].search('"text":"') + 8;
+					const namelength = splittext[i].substr(namestart).search('"');
+					const nametext = splittext[i].substr(namestart, namelength);
+					const beforename = splittext[i].substr(0, namestart);
+					const aftername = splittext[i].substr(namestart + namelength);
+					splittext[i] = [beforename, nametext, aftername];
+					i++;
+					const labelstart = splittext[i].search('"text":"') + 8;
+					const labellength = splittext[i].substr(labelstart).search('"');
+					const labeltext = splittext[i].substr(labelstart, labellength);
+					const beforelabel = splittext[i].substr(0, labelstart);
+					const afterlabel = splittext[i].substr(labelstart + labellength);
+					splittext[i] = [beforelabel, labeltext, afterlabel];
+					
+					const imunus1 = i - 1;
+					textlist.innerHTML += '<span class="exampletext">' + nametext + ': ' + labeltext + '</span><br>';
+					textlist.innerHTML += '<input type="text" class="namelist" id="edittext' + imunus1 + '" value="' + nametext + '"> <input type="text" class="labellist" id="edittext' + i + '" value="' + labeltext +'"><br>'			
+				} else if (splittext[i].substr(0,5) === 'label') {
+					const labelstart = splittext[i].search('"text":"') + 8;
+					const labellength = splittext[i].substr(labelstart).search('"');
+					const labeltext = splittext[i].substr(labelstart, labellength);
+					const beforelabel = splittext[i].substr(0, labelstart);
+					const afterlabel = splittext[i].substr(labelstart + labellength);
+					splittext[i] = [beforelabel, labeltext, afterlabel];
+					
+					textlist.innerHTML += '<span class="exampletext">선택지: ' + labeltext + '</span><br>';
+					textlist.innerHTML += '<input type="text" class="labellistwoname" id="edittext' + i + '" value="' + labeltext +'"><br>'			
+				}
+			}
 		}
 	}	
-	// 파일 데이터 불러오고 분리하는 부분
+	// 파일 데이터 불러오고 분리하는 부분. label 앞에 name이 없는 경우 선택지로 가정
 	
 	function savefile() {
 		assembletext();
@@ -91,10 +107,12 @@
 	function assembletext() {
 		assembledtext = splittext[0];
 		for (let i=1; i<splittext.length; i++) {
-			const namelistid = 'namelist' + i;			
-			const scriptlistid = 'scriptlist' + i;
-			
-			assembledtext = assembledtext + '"cmd":"name"' + splittext[i][0] + document.getElementById(namelistid).value + splittext[i][2] + document.getElementById(scriptlistid).value + splittext[i][4];
+			if (typeof splittext[i] === 'string') {
+				assembledtext += '"cmd":"' + splittext[i];
+			} else {
+				const edittextid = 'edittext' + i;	
+				assembledtext += '"cmd":"' + splittext[i][0] + document.getElementById(edittextid).value + splittext[i][2];
+			}
 		}
 	}
 </script>
