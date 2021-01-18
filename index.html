@@ -27,10 +27,11 @@
 
 <script>
 	var rawtext = "";
-	var splittext = "";
+	var remaintext = [];
 	var textlist = document.getElementById('textlist');
 	var assembledtext = "";
 	var textfilename = "";
+	var textnum = 0;
 	
 	function loaddata(filedata) {
 		var reader = new FileReader();
@@ -42,41 +43,53 @@
 		reader.readAsText(filedata[0], "UTF-8");
 	}
 	
-	function showtext(textfile) {
-		textlist.innerHTML = '';  // paragraph 리셋
-
-		splittext = textfile.split('"cmd":"')
-		for (let i=1; i<splittext.length; i++) {
-			if (splittext[i].search('"text":"')) {
-				if (splittext[i].substr(0,4) === 'name') {
-					const namestart = splittext[i].search('"text":"') + 8;
-					const namelength = splittext[i].substr(namestart).search('"');
-					const nametext = splittext[i].substr(namestart, namelength);
-					const beforename = splittext[i].substr(0, namestart);
-					const aftername = splittext[i].substr(namestart + namelength);
-					splittext[i] = [beforename, nametext, aftername];
-					i++;
-					const labelstart = splittext[i].search('"text":"') + 8;
-					const labellength = splittext[i].substr(labelstart).search('"');
-					const labeltext = splittext[i].substr(labelstart, labellength);
-					const beforelabel = splittext[i].substr(0, labelstart);
-					const afterlabel = splittext[i].substr(labelstart + labellength);
-					splittext[i] = [beforelabel, labeltext, afterlabel];
-					
-					const imunus1 = i - 1;
-					textlist.innerHTML += '<span class="exampletext">' + nametext + ': ' + labeltext + '</span><br>';
-					textlist.innerHTML += '<input type="text" class="namelist" id="edittext' + imunus1 + '" value="' + nametext + '"> <input type="text" class="labellist" id="edittext' + i + '" value="' + labeltext +'"><br>'			
-				} else if (splittext[i].substr(0,5) === 'label') {
-					const labelstart = splittext[i].search('"text":"') + 8;
-					const labellength = splittext[i].substr(labelstart).search('"');
-					const labeltext = splittext[i].substr(labelstart, labellength);
-					const beforelabel = splittext[i].substr(0, labelstart);
-					const afterlabel = splittext[i].substr(labelstart + labellength);
-					splittext[i] = [beforelabel, labeltext, afterlabel];
-					
-					textlist.innerHTML += '<span class="exampletext">선택지: ' + labeltext + '</span><br>';
-					textlist.innerHTML += '<input type="text" class="labellistwoname" id="edittext' + i + '" value="' + labeltext +'"><br>'			
-				}
+	function showtext(textstring) {
+		textlist.innerHTML = '';
+		textnum = 0;
+		remaintext = [];
+		var searchpos = 0;
+		// 초기 조건 리셋
+		const totallength = textstring.length;
+		while (searchpos < totallength) {
+			const textpos = textstring.indexOf('"text":"', searchpos);
+			if (textpos === -1) {
+				const lasttext = textstring.substr(searchpos, totallength - searchpos);
+				remaintext.push(lasttext);
+				break;
+			}
+			const lbracketpos = textstring.lastIndexOf('{', textpos);
+			const cmdpos = textstring.indexOf('"cmd":"', lbracketpos);
+			
+			if (textstring.substr(cmdpos + 7, 4) === 'name') {
+				const namestart = textpos + 8;
+				const namelength = textstring.indexOf('"', namestart) - namestart;
+				const nametext = textstring.substr(namestart, namelength);
+				const beforename = textstring.substr(searchpos, namestart - searchpos);
+				remaintext.push(beforename);
+				searchpos = namestart + namelength;
+				
+				const labelstart = textstring.indexOf('"text":"', searchpos) + 8;
+				const labellength = textstring.indexOf('"', labelstart) - labelstart;
+				const labeltext = textstring.substr(labelstart, labellength);
+				const beforelabel = textstring.substr(searchpos, labelstart - searchpos);
+				remaintext.push(beforelabel);
+				searchpos = labelstart + labellength;
+				textnum += 2;
+				textnummin1 = textnum - 1;
+				
+				textlist.innerHTML += '<span class="exampletext">' + nametext + ': ' + labeltext + '</span><br>';
+				textlist.innerHTML += '<input type="text" class="namelist" id="edittext' + textnummin1 + '" value="' + nametext + '"> <input type="text" class="labellist" id="edittext' + textnum + '" value="' + labeltext +'"><br>'			
+			} else {
+				const labelstart = textstring.indexOf('"text":"', searchpos) + 8;
+				const labellength = textstring.indexOf('"', labelstart) - labelstart;
+				const labeltext = textstring.substr(labelstart, labellength);
+				const beforelabel = textstring.substr(searchpos, labelstart - searchpos);
+				remaintext.push(beforelabel);
+				searchpos = labelstart + labellength;
+				textnum += 1;
+				
+				textlist.innerHTML += '<span class="exampletext">선택지: ' + labeltext + '</span><br>';
+				textlist.innerHTML += '<input type="text" class="labellistwoname" id="edittext' + textnum + '" value="' + labeltext +'"><br>'	
 			}
 		}
 	}	
@@ -106,14 +119,10 @@
 	}
 	
 	function assembletext() {
-		assembledtext = splittext[0];
-		for (let i=1; i<splittext.length; i++) {
-			if (typeof splittext[i] === 'string') {
-				assembledtext += '"cmd":"' + splittext[i];
-			} else {
-				const edittextid = 'edittext' + i;	
-				assembledtext += '"cmd":"' + splittext[i][0] + document.getElementById(edittextid).value + splittext[i][2];
-			}
+		assembledtext = remaintext[0];
+		for (let i=1; i<remaintext.length; i++) {
+			const edittextid = 'edittext' + i;
+			assembledtext += document.getElementById(edittextid).value + remaintext[i];
 		}
 	}
 </script>
